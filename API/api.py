@@ -1,17 +1,13 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-# In[2]:
+# In[ ]:
 
 
 # импорт необходимых библиотек
 import pickle
 import pandas as pd
-from flask import Flask, request, render_template
-
-
-# In[3]:
-
+from flask import Flask, request, render_template, send_file
 
 # загружаем необходимые модули
 with open('encoder.pcl', 'rb') as f:
@@ -19,13 +15,11 @@ with open('encoder.pcl', 'rb') as f:
     
 with open('model.pcl', 'rb') as f:
     model = pickle.load(f)
-
-
 # # Разработка API
 
 # Определю команды(функции), которые будут доступны в API
 
-# In[4]:
+# In[ ]:
 
 
 app = Flask(__name__)
@@ -38,31 +32,24 @@ def check_server():
         /model/prediction/(file_name)/ - (file_name) имя файля по которому нужно сделать предсказание, формат файла должен быть .csv<br>
     '''
 
-форма для заг
-@app.route('/model/prediction_from_file/')  
+@app.route('/model/prediction_from_file/', methods = ['POST', 'GET'])  
 def upload():  
-    return render_template("file_upload_form.html")  
-
-@app.route('/success', methods = ['POST'])  
-def success():  
     if request.method == 'POST':  
         f = request.files['file']  
         f.save('data/' + f.filename)  
-        get_predict(f.filename)
-        
+        return get_predict(f.filename)
+    else:
+        return render_template("file_upload_form.html")  
+    
 
 @app.route('/model/prediction/<string:file_name>/')
 def get_predict(file_name):
+    print('файл загружен', 'data/'+ file_name)
+    
     X_df = pd.read_csv('data/'+ file_name)
     
-    X_df['age'] = encoder['age'].transform(X_df['age'])
-    X_df['A1Cresult'] = encoder['A1Cresult'].transform(X_df['A1Cresult'])
-    X_df['insulin'] = encoder['insulin'].transform(X_df['insulin'])
-    
-    pred = model.predict(X_df)
-    res = encoder['readmitted'].inverse_transform(pred)[0] if encoder['readmitted'].inverse_transform(pred)[0] != 'NO' else '0'
-
-    return f'Наиболее вероятно, что пациент будет повторно принят: {res} раз'
+    send_file('data/'+file_name, as_attachment=True) # автоматическая загрузка файла
+    return 'success'
 
 
 # ### Запуск сервера
